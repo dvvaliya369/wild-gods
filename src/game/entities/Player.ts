@@ -8,6 +8,10 @@ const SPEAR_COOLDOWN = 280;
 const DODGE_SPEED = 650;
 const DODGE_DURATION = 160;
 const DODGE_COOLDOWN = 720;
+const HURT_DURATION = 220;
+const DAMAGE_INVULNERABILITY = 700;
+
+export const PLAYER_MAX_HEALTH = 5;
 
 type MovementKeys = {
   up: Phaser.Input.Keyboard.Key;
@@ -24,6 +28,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private nextAttackAt = 0;
   private nextDodgeAt = 0;
   private dodgeEndsAt = 0;
+  private hurtEndsAt = 0;
+  private invulnerableUntil = 0;
+  private health = PLAYER_MAX_HEALTH;
+  private defeated = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     createPlaceholderTexture(scene);
@@ -53,6 +61,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(time: number, aimX: number, aimY: number): void {
+    if (this.defeated) {
+      this.setVelocity(0);
+      return;
+    }
+
     const horizontal = Number(this.wasd.right.isDown || this.cursors.right.isDown)
       - Number(this.wasd.left.isDown || this.cursors.left.isDown);
     const vertical = Number(this.wasd.down.isDown || this.cursors.down.isDown)
@@ -62,6 +75,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setRotation(
       Phaser.Math.Angle.Between(this.x, this.y, aimX, aimY) + Math.PI / 2,
     );
+
+    if (time < this.hurtEndsAt) {
+      this.setScale(0.94, 1.06);
+      return;
+    }
+
+    if (this.tintTopLeft !== 0xffffff && time >= this.invulnerableUntil) {
+      this.clearTint();
+      this.setAlpha(1);
+    }
 
     if (time < this.dodgeEndsAt) {
       this.setScale(1.12, 0.88);
@@ -89,7 +112,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   attack(aimX: number, aimY: number): boolean {
-    if (this.scene.time.now < this.nextAttackAt || this.scene.time.now < this.dodgeEndsAt) {
+    if (
+      this.defeated
+      || this.scene.time.now < this.nextAttackAt
+      || this.scene.time.now < this.dodgeEndsAt
+      || this.scene.time.now < this.hurtEndsAt
+    ) {
       return false;
     }
 
@@ -121,6 +149,45 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.scene.cameras.main.shake(60, 0.0015);
     this.scene.events.emit('player-spear-attack', hitArea, angle);
     return true;
+  }
+
+  takeDamage(amount: number, sourceX: number, sourceY: number): boolean {
+    const now = this.scene.time.now;
+    if (
+      this.defeated
+      || now < this.dodgeEndsAt
+      || now < this.invulnerableUntil
+    ) {
+      return false;
+    }
+
+    this.health = Math.max(0, this.health - amount);
+    this.hurtEndsAt = now + HURT_DURATION;
+    this.invulnerableUntil = now + DAMAGE_INVULNERABILITY;
+    this.setTint(0xf07864).setAlpha(0.8);
+
+    const knockback = new Phaser.Math.Vector2(this.x - sourceX, this.y - sourceY);
+    if (knockback.lengthSq() === 0) knockback.set(0, 1);
+    knockback.normalize().scale(430);
+    this.setVelocity(knockback.x, knockback.y);
+    this.scene.cameras.main.shake(120, 0.006);
+    this.scene.events.emit('player-health-changed', this.health, PLAYER_MAX_HEALTH);
+
+    if (this.health === 0) {
+      this.defeated = true;
+      this.setTint(0x5d3840).setAlpha(0.65);
+      this.scene.events.emit('player-defeated');
+    }
+
+    return true;
+  }
+
+  getHealth(): number {
+    return this.health;
+  }
+
+  isDefeated(): boolean {
+    return this.defeated;
   }
 
   private startDodge(time: number): void {

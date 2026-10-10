@@ -13,6 +13,9 @@ export type CorruptionAnchor = {
   id: string;
   guardianId: GuardianSpawn['id'];
   position: Phaser.Math.Vector2;
+  marker: Phaser.GameObjects.Triangle;
+  obstacle: Phaser.GameObjects.Zone;
+  destroyed: boolean;
 };
 
 export type Shrine = {
@@ -288,7 +291,7 @@ const createCorruptionAnchors = (
   scene: Phaser.Scene,
   obstacles: Phaser.GameObjects.Zone[],
 ): CorruptionAnchor[] => {
-  const anchors: CorruptionAnchor[] = [
+  const definitions = [
     { id: 'stag-north', guardianId: 'moon-stag', position: new Phaser.Math.Vector2(610, 770) },
     { id: 'stag-west', guardianId: 'moon-stag', position: new Phaser.Math.Vector2(390, 1120) },
     { id: 'stag-south', guardianId: 'moon-stag', position: new Phaser.Math.Vector2(760, 1370) },
@@ -298,19 +301,17 @@ const createCorruptionAnchors = (
     { id: 'serpent-north', guardianId: 'tide-serpent', position: new Phaser.Math.Vector2(3060, 1400) },
     { id: 'serpent-east', guardianId: 'tide-serpent', position: new Phaser.Math.Vector2(3400, 1770) },
     { id: 'serpent-south', guardianId: 'tide-serpent', position: new Phaser.Math.Vector2(3040, 2040) },
-  ];
+  ] as const;
 
-  const crystals = scene.add.graphics().setDepth(7);
-  anchors.forEach((anchor) => {
-    const { x, y } = anchor.position;
-    crystals.fillStyle(COLORS.corruption, 0.9);
-    crystals.fillTriangle(x, y - 42, x - 24, y + 28, x + 24, y + 28);
-    crystals.lineStyle(4, 0xc99bec, 0.65);
-    crystals.strokeTriangle(x, y - 42, x - 24, y + 28, x + 24, y + 28);
-    addObstacle(scene, obstacles, x, y, 44, 50);
+  return definitions.map(({ id, guardianId, position }) => {
+    const marker = scene.add
+      .triangle(position.x, position.y, 0, -42, -24, 28, 24, 28, COLORS.corruption, 0.9)
+      .setStrokeStyle(4, 0xc99bec, 0.7)
+      .setDepth(7);
+    const obstacle = addObstacle(scene, obstacles, position.x, position.y, 44, 50);
+
+    return { id, guardianId, position, marker, obstacle, destroyed: false };
   });
-
-  return anchors;
 };
 
 const drawRegionLabels = (scene: Phaser.Scene): void => {
@@ -343,8 +344,9 @@ const addObstacle = (
   y: number,
   width: number,
   height: number,
-): void => {
+): Phaser.GameObjects.Zone => {
   const obstacle = scene.add.zone(x, y, width, height);
   scene.physics.add.existing(obstacle, true);
   obstacles.push(obstacle);
+  return obstacle;
 };
