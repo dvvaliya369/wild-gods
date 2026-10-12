@@ -5,5 +5,6 @@ export const WORLD_HEIGHT = 2400;
 
 export const SCENE_KEYS = {
   boot: 'BootScene',
+  title: 'TitleScene',
   game: 'GameScene',
 } as const;

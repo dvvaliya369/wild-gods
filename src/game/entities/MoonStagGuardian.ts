@@ -1,20 +1,20 @@
 import Phaser from 'phaser';
-import { MagicalLure } from './MagicalLure';
+import { configureCircleBody } from '../physics/configureCircleBody';
 import { Player } from './Player';
 
 const MOON_STAG_TEXTURE = 'moon-stag-placeholder';
-const LURE_APPROACH_SPEED = 150;
+const DREAMLAYER_MOON_STAG_TEXTURE = 'moon-stag';
 const CHARGE_SPEED = 720;
 const CHARGE_WINDUP = 820;
 const CHARGE_DURATION = 900;
 const CHARGE_HIT_DISTANCE = 72;
 const STUN_DURATION = 1000;
 
-type GuardianState = 'idle' | 'lured' | 'windup' | 'charging' | 'stunned' | 'purified';
+type GuardianState = 'idle' | 'windup' | 'charging' | 'stunned' | 'purified';
 
 export class MoonStagGuardian extends Phaser.Physics.Arcade.Sprite {
   private guardianState: GuardianState = 'idle';
-  private lureTarget?: MagicalLure;
+  private attackTarget?: Phaser.Math.Vector2;
   private readonly chargeDirection = new Phaser.Math.Vector2(0, 1);
   private stateEndsAt = 0;
   private playerHitThisCharge = false;
@@ -23,15 +23,21 @@ export class MoonStagGuardian extends Phaser.Physics.Arcade.Sprite {
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     createMoonStagTexture(scene);
-    super(scene, x, y, MOON_STAG_TEXTURE);
+    const texture = scene.textures.exists(DREAMLAYER_MOON_STAG_TEXTURE)
+      ? DREAMLAYER_MOON_STAG_TEXTURE
+      : MOON_STAG_TEXTURE;
+    super(scene, x, y, texture);
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setCollideWorldBounds(true);
     this.setDepth(45);
 
-    const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setCircle(40, 30, 30);
+    if (texture === DREAMLAYER_MOON_STAG_TEXTURE) {
+      this.setDisplaySize(180, 180);
+    }
+
+    configureCircleBody(this, 40);
   }
 
   update(time: number, player: Player): void {
@@ -45,6 +51,11 @@ export class MoonStagGuardian extends Phaser.Physics.Arcade.Sprite {
       if (time >= this.stateEndsAt) {
         this.clearTint();
         this.guardianState = 'idle';
+        if (this.attackTarget) {
+          const target = this.attackTarget.clone();
+          this.attackTarget = undefined;
+          this.startWindup(time, target.x, target.y);
+        }
       }
       return;
     }
@@ -60,40 +71,19 @@ export class MoonStagGuardian extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    if (this.lureTarget?.active) {
-      const distance = Phaser.Math.Distance.Between(
-        this.x,
-        this.y,
-        this.lureTarget.x,
-        this.lureTarget.y,
-      );
-      if (distance <= 115) {
-        this.startWindup(time, this.lureTarget.x, this.lureTarget.y);
-        return;
-      }
-
-      this.guardianState = 'lured';
-      this.moveToward(this.lureTarget.x, this.lureTarget.y, LURE_APPROACH_SPEED);
-      return;
-    }
-
-    this.lureTarget = undefined;
     this.guardianState = 'idle';
     this.setVelocity(0);
   }
 
-  reactToLure(lure: MagicalLure, attractionArea: Phaser.Geom.Circle): void {
-    if (
-      this.guardianState === 'purified'
-      || this.guardianState === 'charging'
-      || this.guardianState === 'windup'
-      || !attractionArea.contains(this.x, this.y)
-    ) {
-      return;
-    }
+  triggerAnchorAttack(attackTarget: Phaser.Math.Vector2): boolean {
+    if (!['idle', 'stunned'].includes(this.guardianState)) return false;
 
-    this.lureTarget = lure;
-    this.guardianState = 'lured';
+    if (this.guardianState === 'stunned') {
+      this.attackTarget = attackTarget.clone();
+      return true;
+    }
+    this.startWindup(this.scene.time.now, attackTarget.x, attackTarget.y);
+    return true;
   }
 
   isCharging(): boolean {
@@ -104,6 +94,11 @@ export class MoonStagGuardian extends Phaser.Physics.Arcade.Sprite {
     return this.guardianState === 'purified';
   }
 
+  shiftTimers(duration: number): void {
+    this.stateEndsAt += duration;
+    this.lastTrailAt += duration;
+  }
+
   onAnchorHit(): void {
     if (!this.isCharging()) return;
 
@@ -111,12 +106,12 @@ export class MoonStagGuardian extends Phaser.Physics.Arcade.Sprite {
     this.guardianState = 'stunned';
     this.stateEndsAt = this.scene.time.now + STUN_DURATION;
     this.setTint(0xf1d78b);
-    this.lureTarget = undefined;
+    this.attackTarget = undefined;
     this.scene.cameras.main.shake(220, 0.012);
     this.scene.events.emit('moon-stag-stunned');
   }
 
-  purify(): void {
+  purify(silent = false): void {
     if (this.guardianState === 'purified') return;
 
     this.guardianState = 'purified';
@@ -125,6 +120,8 @@ export class MoonStagGuardian extends Phaser.Physics.Arcade.Sprite {
     this.telegraph = undefined;
     this.clearTint();
     this.setTint(0x8fe0c5);
+
+    if (silent) return;
 
     const pulse = this.scene.add
       .circle(this.x, this.y, 45, 0x8fe0c5, 0.32)
@@ -144,7 +141,6 @@ export class MoonStagGuardian extends Phaser.Physics.Arcade.Sprite {
   private startWindup(time: number, targetX: number, targetY: number): void {
     this.guardianState = 'windup';
     this.stateEndsAt = time + CHARGE_WINDUP;
-    this.lureTarget = undefined;
     this.chargeDirection.set(targetX - this.x, targetY - this.y);
     if (this.chargeDirection.lengthSq() === 0) this.chargeDirection.set(0, 1);
     this.chargeDirection.normalize();
@@ -214,12 +210,6 @@ export class MoonStagGuardian extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  private moveToward(targetX: number, targetY: number, speed: number): void {
-    const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
-    const body = this.body as Phaser.Physics.Arcade.Body;
-    this.scene.physics.velocityFromRotation(angle, speed, body.velocity);
-    this.setRotation(angle + Math.PI / 2);
-  }
 }
 
 const createMoonStagTexture = (scene: Phaser.Scene): void => {

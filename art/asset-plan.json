@@ -1,0 +1,88 @@
+{
+  "creditBudget": {
+    "startingBalance": 85,
+    "currentBatchMaximum": 3,
+    "usedByProject": 17
+  },
+  "visualDirection": "Top-down illustrated dark-fantasy field journal, bold ink outlines, readable silhouettes, limited forest green, moon gold, teal water, ember orange, and corruption violet palette",
+  "assets": [
+    {
+      "id": "hero-reference",
+      "status": "superseded",
+      "operation": "text_to_image",
+      "prompt": "Top-down three-quarter game character reference of a young sanctuary warden, dark braided hair, moss-green hooded cloak, cream tunic, gold crescent brooch, short ritual spear with a small glowing lure lantern tied below the blade, practical boots and bracers, bold readable silhouette, illustrated dark-fantasy naturalist field journal style, clean dark ink outline, limited forest green and moon-gold palette, complete isolated body centered on a plain light neutral background, no scenery, no text, no border",
+      "rawPath": "art/hero-reference.png",
+      "finalPath": "public/assets/images/hero.png"
+    },
+    {
+      "id": "hero-portrait-reference",
+      "status": "imported_portrait_and_identity",
+      "operation": "text_to_image",
+      "prompt": "Complete full-body top-down three-quarter 2D game character reference of a young sanctuary warden, viewed from a high 65-degree overhead camera, warm brown skin with clearly readable eyes and facial features, dark braided hair, moss-green hooded cloak, cream tunic, gold crescent brooch, practical boots and bracers, holding one short ritual spear with a small glowing lure lantern tied below the blade, entire spear and complete body visible with generous empty space on every side, compact bold silhouette readable as a small game sprite, illustrated dark-fantasy naturalist field journal style, clean dark ink outline, limited forest green and moon-gold palette, plain light neutral background, no scenery, no text, no border, no cropped limbs, no cropped weapon, not a portrait",
+      "rawPath": "art/hero-reference-v2.png",
+      "finalPath": "public/assets/images/hero-portrait.png"
+    },
+    {
+      "id": "hero-overhead-combat",
+      "status": "imported_gameplay",
+      "operation": "image_to_image",
+      "reference": "hero-portrait-reference",
+      "prompt": "Keep this exact sanctuary warden identity, warm brown skin, braided dark hair, moss-green cloak, cream tunic, crescent brooch, boots, bracers, and ritual spear. Convert her into a true orthographic top-down 2D action-game sprite viewed from directly overhead with only a slight 70-degree tilt so the face remains readable. Show a compact alert combat stance facing straight upward, feet apart, spear held close along the body's forward direction with the glowing lure lantern below the blade. Entire body and entire spear visible, centered, occupying about 65 percent of the square canvas, realistic illustrated proportions, strong readable silhouette, natural lighting matching the reference, plain light neutral background, no scenery, no text, no border, not side view, not front portrait, not lying down, no cropped weapon.",
+      "rawPath": "art/hero-overhead-combat.png",
+      "finalPath": "public/assets/images/hero-combat.png"
+    },
+    {
+      "id": "moon-stag-reference",
+      "status": "imported_gameplay",
+      "operation": "text_to_image",
+      "prompt": "Complete top-down 2D game guardian reference of a giant magical Moon Stag viewed from a high 70-degree overhead camera, compact white deer body, two symmetrical gold crescent antlers, luminous teal eyes, indigo and teal moon-phase markings along its back, powerful readable silhouette, corrupted violet crystal growths around its shoulders, illustrated dark-fantasy naturalist field journal style, clean dark ink outline, complete isolated body centered with empty space, plain light neutral background, no scenery, no text, no border",
+      "rawPath": "art/moon-stag-reference.png",
+      "finalPath": "public/assets/images/moon-stag.png"
+    },
+    {
+      "id": "ember-boar-reference",
+      "status": "imported_gameplay",
+      "operation": "text_to_image",
+      "prompt": "Complete top-down 2D game guardian reference of a giant Ember Boar viewed from a high 70-degree overhead camera, massive charcoal and rust-red body, glowing orange cracks like banked coals, two broad brass-colored tusks, burning amber eyes, rugged mane shaped like smoke, corrupted violet crystal growths around its shoulders, powerful readable silhouette, illustrated dark-fantasy naturalist field journal style, clean dark ink outline, complete isolated body centered with empty space, plain light neutral background, no scenery, no text, no border",
+      "rawPath": "art/ember-boar-reference.png",
+      "finalPath": "public/assets/images/ember-boar.png"
+    },
+    {
+      "id": "tide-serpent-reference",
+      "status": "imported_gameplay",
+      "operation": "text_to_image",
+      "prompt": "Complete top-down 2D game guardian reference of a giant Tide Serpent viewed from a high 70-degree overhead camera, long coiled teal and deep-blue body, broad translucent fins, pale pearl moon markings, luminous aqua eyes, coral-like crown, corrupted violet crystal growths along its spine, bold readable silhouette with head and tail clearly separated, illustrated dark-fantasy naturalist field journal style, clean dark ink outline, complete isolated body centered with empty space, plain light neutral background, no water or scenery, no text, no border",
+      "rawPath": "art/tide-serpent-reference.png",
+      "finalPath": "public/assets/images/tide-serpent.png"
+    },
+    {
+      "id": "shadow-hunter-reference",
+      "status": "imported_gameplay",
+      "operation": "text_to_image",
+      "prompt": "Complete top-down 2D game enemy reference of a small shadow hunter viewed from a high 70-degree overhead camera, hunched agile body made of violet-black smoke, two bright rose eyes, long crow-like mask, thin clawed arms, torn wisps trailing behind, subtle corruption crystal fragments, compact bold silhouette readable at small size, illustrated dark-fantasy naturalist field journal style, clean dark ink outline, complete isolated body centered with generous empty space, plain light neutral background, no scenery, no text, no border",
+      "rawPath": "art/shadow-hunter-reference.png",
+      "finalPath": "public/assets/images/shadow-hunter.png"
+    },
+    {
+      "id": "moonwood-ground",
+      "status": "imported_environment",
+      "operation": "text_to_image",
+      "prompt": "Square seamless-style top-down 2D game ground texture for an ancient moonlit forest, dense dark moss, subtle roots, small pale moon flowers, scattered leaves, soft teal bioluminescent specks, illustrated dark-fantasy naturalist field journal style, limited forest-green palette, even lighting, no horizon, no characters, no large objects, no path, no text, edge-to-edge texture",
+      "finalPath": "public/assets/images/moonwood-ground.png"
+    },
+    {
+      "id": "ashen-ground",
+      "status": "imported_environment",
+      "operation": "text_to_image",
+      "prompt": "Square seamless-style top-down 2D game ground texture for a volcanic ashen valley, dark cracked basalt, thin ember-orange glow in some cracks, scattered charcoal dust and muted rust stone, illustrated dark-fantasy naturalist field journal style, even overhead lighting, no horizon, no characters, no large objects, no lava river, no path, no text, edge-to-edge texture",
+      "finalPath": "public/assets/images/ashen-ground.png"
+    },
+    {
+      "id": "drowned-ground",
+      "status": "imported_environment",
+      "operation": "text_to_image",
+      "prompt": "Square seamless-style top-down 2D game ground texture for drowned ancient ruins, shallow blue-green water over worn stone mosaic, soft silt, tiny shells and faint moon symbols, subtle reflected aqua light, illustrated dark-fantasy naturalist field journal style, even overhead lighting, no horizon, no characters, no large objects, no columns, no path, no text, edge-to-edge texture",
+      "finalPath": "public/assets/images/drowned-ground.png"
+    }
+  ]
+}

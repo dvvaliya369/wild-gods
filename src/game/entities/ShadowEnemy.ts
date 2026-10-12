@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
+import { configureCircleBody } from '../physics/configureCircleBody';
 import { Player } from './Player';
 
 const SHADOW_TEXTURE = 'shadow-enemy-placeholder';
+const DREAMLAYER_SHADOW_TEXTURE = 'shadow-hunter';
 const MAX_HEALTH = 3;
 const MOVE_SPEED = 115;
 const DETECTION_DISTANCE = 430;
@@ -16,18 +18,26 @@ export class ShadowEnemy extends Phaser.Physics.Arcade.Sprite {
   private health = MAX_HEALTH;
   private stateEndsAt = 0;
   private telegraph?: Phaser.GameObjects.Arc;
+  private readonly visualScale: number;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     createShadowTexture(scene);
-    super(scene, x, y, SHADOW_TEXTURE);
+    const texture = scene.textures.exists(DREAMLAYER_SHADOW_TEXTURE)
+      ? DREAMLAYER_SHADOW_TEXTURE
+      : SHADOW_TEXTURE;
+    super(scene, x, y, texture);
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setCollideWorldBounds(true);
     this.setDepth(35);
 
-    const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setCircle(21, 7, 9);
+    if (texture === DREAMLAYER_SHADOW_TEXTURE) {
+      this.setDisplaySize(90, 90);
+    }
+    this.visualScale = this.scaleX;
+
+    configureCircleBody(this, 21);
   }
 
   update(time: number, player: Player): void {
@@ -92,6 +102,10 @@ export class ShadowEnemy extends Phaser.Physics.Arcade.Sprite {
     return true;
   }
 
+  shiftTimers(duration: number): void {
+    this.stateEndsAt += duration;
+  }
+
   private beginAttack(time: number): void {
     this.enemyState = 'windup';
     this.stateEndsAt = time + ATTACK_WINDUP;
@@ -149,7 +163,8 @@ export class ShadowEnemy extends Phaser.Physics.Arcade.Sprite {
     this.scene.tweens.add({
       targets: this,
       alpha: 0,
-      scale: 1.5,
+      scaleX: this.visualScale * 1.5,
+      scaleY: this.visualScale * 1.5,
       angle: this.angle + 90,
       duration: 340,
       ease: 'Quad.easeIn',

@@ -26,11 +26,23 @@ export type Shrine = {
   activated: boolean;
 };
 
+export type RegionGate = {
+  id: string;
+  requiredGuardian: GuardianSpawn['id'];
+  boundaryX: number;
+  minimumY: number;
+  maximumY: number;
+  overlay: Phaser.GameObjects.Rectangle;
+  label: Phaser.GameObjects.Text;
+  opened: boolean;
+};
+
 export type WorldMap = {
   obstacles: Phaser.GameObjects.Zone[];
   guardianSpawns: GuardianSpawn[];
   corruptionAnchors: CorruptionAnchor[];
   shrines: Shrine[];
+  regionGates: RegionGate[];
   playerStart: Phaser.Math.Vector2;
 };
 
@@ -56,6 +68,7 @@ export const createWorld = (scene: Phaser.Scene): WorldMap => {
   scene.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
   drawRegions(scene, random);
+  drawDreamLayerTextures(scene);
   drawPaths(scene);
   drawSanctuary(scene, obstacles);
   drawMoonwood(scene, random, obstacles);
@@ -63,8 +76,9 @@ export const createWorld = (scene: Phaser.Scene): WorldMap => {
   drawDrownedRuins(scene, obstacles);
 
   const guardianSpawns = createGuardianSpawns(scene);
-  const corruptionAnchors = createCorruptionAnchors(scene, obstacles);
+  const corruptionAnchors = createCorruptionAnchors(scene);
   const shrines = createShrines(scene);
+  const regionGates = createRegionGates(scene);
   drawRegionLabels(scene);
 
   return {
@@ -72,8 +86,97 @@ export const createWorld = (scene: Phaser.Scene): WorldMap => {
     guardianSpawns,
     corruptionAnchors,
     shrines,
+    regionGates,
     playerStart: new Phaser.Math.Vector2(1800, 1270),
   };
+};
+
+const createRegionGates = (scene: Phaser.Scene): RegionGate[] => {
+  const definitions = [
+    {
+      id: 'ashen-valley-gate',
+      requiredGuardian: 'moon-stag',
+      x: 2900,
+      y: 600,
+      width: 1400,
+      height: 1200,
+      minimumY: 0,
+      maximumY: 1200,
+      color: 0xd5ad55,
+      label: 'RESTORE THE MOON STAG TO ENTER',
+    },
+    {
+      id: 'drowned-ruins-gate',
+      requiredGuardian: 'ember-boar',
+      x: 2900,
+      y: 1800,
+      width: 1400,
+      height: 1200,
+      minimumY: 1200,
+      maximumY: 2400,
+      color: 0xe8794a,
+      label: 'RESTORE THE EMBER BOAR TO ENTER',
+    },
+  ] as const;
+
+  return definitions.map((definition) => {
+    const overlay = scene.add
+      .rectangle(
+        definition.x,
+        definition.y,
+        definition.width,
+        definition.height,
+        definition.color,
+        0.08,
+      )
+      .setStrokeStyle(8, definition.color, 0.35)
+      .setDepth(24);
+    const label = scene.add
+      .text(2230, definition.y, definition.label, {
+        backgroundColor: '#07130fdd',
+        color: '#f3ead0',
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '17px',
+        fontStyle: 'bold',
+        padding: { x: 14, y: 9 },
+      })
+      .setOrigin(0, 0.5)
+      .setDepth(26);
+
+    return {
+      id: definition.id,
+      requiredGuardian: definition.requiredGuardian,
+      boundaryX: 2200,
+      minimumY: definition.minimumY,
+      maximumY: definition.maximumY,
+      overlay,
+      label,
+      opened: false,
+    };
+  });
+};
+
+const drawDreamLayerTextures = (scene: Phaser.Scene): void => {
+  if (scene.textures.exists('moonwood-ground')) {
+    scene.add
+      .tileSprite(750, WORLD_HEIGHT / 2, 1500, WORLD_HEIGHT, 'moonwood-ground')
+      .setAlpha(0.28)
+      .setDepth(1);
+  }
+
+  if (scene.textures.exists('ashen-ground')) {
+    scene.add
+      .tileSprite(2550, 600, 2100, 1200, 'ashen-ground')
+      .setAlpha(0.32)
+      .setDepth(1);
+  }
+
+  if (scene.textures.exists('drowned-ground')) {
+    scene.add
+      .tileSprite(2550, 1800, 2100, 1200, 'drowned-ground')
+      .setAlpha(0.3)
+      .setDepth(1);
+  }
 };
 
 const createShrines = (scene: Phaser.Scene): Shrine[] => {
@@ -287,10 +390,7 @@ const createGuardianSpawns = (scene: Phaser.Scene): GuardianSpawn[] => {
   return spawns;
 };
 
-const createCorruptionAnchors = (
-  scene: Phaser.Scene,
-  obstacles: Phaser.GameObjects.Zone[],
-): CorruptionAnchor[] => {
+const createCorruptionAnchors = (scene: Phaser.Scene): CorruptionAnchor[] => {
   const definitions = [
     { id: 'stag-north', guardianId: 'moon-stag', position: new Phaser.Math.Vector2(610, 770) },
     { id: 'stag-west', guardianId: 'moon-stag', position: new Phaser.Math.Vector2(390, 1120) },
@@ -308,7 +408,8 @@ const createCorruptionAnchors = (
       .triangle(position.x, position.y, 0, -42, -24, 28, 24, 28, COLORS.corruption, 0.9)
       .setStrokeStyle(4, 0xc99bec, 0.7)
       .setDepth(7);
-    const obstacle = addObstacle(scene, obstacles, position.x, position.y, 44, 50);
+    const obstacle = scene.add.zone(position.x, position.y, 44, 50);
+    scene.physics.add.existing(obstacle, true);
 
     return { id, guardianId, position, marker, obstacle, destroyed: false };
   });

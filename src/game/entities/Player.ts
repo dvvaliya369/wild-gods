@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
+import { configureCircleBody } from '../physics/configureCircleBody';
 
 const PLAYER_TEXTURE = 'player-placeholder';
+const DREAMLAYER_PLAYER_TEXTURE = 'hero-combat';
 const MOVE_SPEED = 270;
 const SPEAR_REACH = 94;
 const SPEAR_RADIUS = 38;
@@ -25,25 +27,36 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private readonly cursors: Phaser.Types.Input.Keyboard.CursorKeys;
   private readonly dodgeKey: Phaser.Input.Keyboard.Key;
   private readonly lastMoveDirection = new Phaser.Math.Vector2(0, -1);
+  private readonly lastSafePosition = new Phaser.Math.Vector2();
   private nextAttackAt = 0;
   private nextDodgeAt = 0;
   private dodgeEndsAt = 0;
   private hurtEndsAt = 0;
   private invulnerableUntil = 0;
+  private nextSafeSnapshotAt = 0;
   private health = PLAYER_MAX_HEALTH;
   private defeated = false;
+  private readonly visualScale: number;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     createPlaceholderTexture(scene);
-    super(scene, x, y, PLAYER_TEXTURE);
+    const texture = scene.textures.exists(DREAMLAYER_PLAYER_TEXTURE)
+      ? DREAMLAYER_PLAYER_TEXTURE
+      : PLAYER_TEXTURE;
+    super(scene, x, y, texture);
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setCollideWorldBounds(true);
     this.setDepth(50);
 
-    const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setCircle(18, 8, 15);
+    if (texture === DREAMLAYER_PLAYER_TEXTURE) {
+      this.setDisplaySize(112, 112);
+    }
+    this.visualScale = this.scaleX;
+
+    configureCircleBody(this, texture === DREAMLAYER_PLAYER_TEXTURE ? 20 : 18);
+    this.lastSafePosition.set(x, y);
 
     const keyboard = scene.input.keyboard;
     if (!keyboard) {
@@ -71,13 +84,29 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const vertical = Number(this.wasd.down.isDown || this.cursors.down.isDown)
       - Number(this.wasd.up.isDown || this.cursors.up.isDown);
     const direction = new Phaser.Math.Vector2(horizontal, vertical);
+    const body = this.body as Phaser.Physics.Arcade.Body;
 
-    this.setRotation(
-      Phaser.Math.Angle.Between(this.x, this.y, aimX, aimY) + Math.PI / 2,
-    );
+    if (
+      time >= this.nextSafeSnapshotAt
+      && body.touching.none
+      && body.blocked.none
+      && time >= this.dodgeEndsAt
+      && time >= this.hurtEndsAt
+    ) {
+      this.lastSafePosition.set(this.x, this.y);
+      this.nextSafeSnapshotAt = time + 500;
+    }
+
+    if (this.texture.key === DREAMLAYER_PLAYER_TEXTURE) {
+      this.setRotation(0).setFlipX(aimX < this.x);
+    } else {
+      this.setRotation(
+        Phaser.Math.Angle.Between(this.x, this.y, aimX, aimY) + Math.PI / 2,
+      );
+    }
 
     if (time < this.hurtEndsAt) {
-      this.setScale(0.94, 1.06);
+      this.setScale(this.visualScale * 0.94, this.visualScale * 1.06);
       return;
     }
 
@@ -87,7 +116,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     if (time < this.dodgeEndsAt) {
-      this.setScale(1.12, 0.88);
+      this.setScale(this.visualScale * 1.12, this.visualScale * 0.88);
       return;
     }
 
@@ -101,14 +130,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     if (direction.lengthSq() === 0) {
       this.setVelocity(0);
-      this.setScale(1);
+      this.setScale(this.visualScale);
       return;
     }
 
     direction.normalize();
     this.lastMoveDirection.copy(direction);
     this.setVelocity(direction.x * MOVE_SPEED, direction.y * MOVE_SPEED);
-    this.setScale(1, 1 + Math.sin(time * 0.018) * 0.04);
+    this.setScale(
+      this.visualScale,
+      this.visualScale * (1 + Math.sin(time * 0.018) * 0.04),
+    );
   }
 
   attack(aimX: number, aimY: number): boolean {
@@ -188,6 +220,26 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   isDefeated(): boolean {
     return this.defeated;
+  }
+
+  moveToSafePosition(x: number, y: number): void {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.reset(x, y);
+    this.lastSafePosition.set(x, y);
+    this.setVelocity(0);
+  }
+
+  recoverToSafePosition(): void {
+    this.moveToSafePosition(this.lastSafePosition.x, this.lastSafePosition.y);
+    this.scene.events.emit('player-unstuck');
+  }
+
+  shiftTimers(duration: number): void {
+    this.nextAttackAt += duration;
+    this.nextDodgeAt += duration;
+    this.dodgeEndsAt += duration;
+    this.hurtEndsAt += duration;
+    this.invulnerableUntil += duration;
   }
 
   private startDodge(time: number): void {
